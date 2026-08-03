@@ -55,6 +55,7 @@ import { getClientIp, getUserAgent } from '../middleware/auth.js';
 import { audit } from '../services/audit.service.js';
 import { logger } from '../utils/logger.js';
 import { notify } from '../services/notification.service.js';
+import { resolveOtpMode } from '../utils/authFlow.js';
 
 // ── Cookie options ───────────────────────────────────────
 const REFRESH_COOKIE_OPTS = {
@@ -242,6 +243,8 @@ export const login = asyncHandler(async (req, res) => {
       step: "otp_required",
       challengeToken,
       sessionId,
+      otpMode: resolveOtpMode(user.role),
+      contactHint: user.email.replace(/(.{2}).+(@.+)/, '$1***$2'),
       contactHint: user.email.replace(/(.{2}).+(@.+)/, "$1***$2"),
     };
     if (!config.isProd) responsePayload.devCode = code;

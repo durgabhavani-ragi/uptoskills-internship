@@ -12,12 +12,14 @@ const todayKey = () => new Date().toISOString().slice(0, 10);
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Card } from '../../shared/components/UI';
+import UserProfileModal from '../../shared/components/UserProfileModal';
 import api from '../../lib/api';
 
 const Interns = () => {
   const [interns, setInterns] = useState([]);
   const [todayAttendance, setTodayAttendance] = useState({}); // userId -> status
   const [loading, setLoading] = useState(true);
+  const [selectedUserId, setSelectedUserId] = useState(null);
   const [marking, setMarking] = useState(null); // userId currently being marked
 
   const [streaks, setStreaks] = useState({});
@@ -220,7 +222,11 @@ const Interns = () => {
             <tbody>
               {interns.map((i) => (
                 <tr key={i.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td className="px-5 py-4 font-medium" style={{ color: 'var(--text)' }}>{i.name}</td>
+                  <td className="px-5 py-4 font-medium" style={{ color: 'var(--text)' }}>
+                    <button type="button" onClick={() => setSelectedUserId(i.id)} className="text-left hover:underline" style={{ color: 'var(--text)' }}>
+                      {i.name}
+                    </button>
+                  </td>
                   <td className="px-5 py-4 text-xs" style={{ color: 'var(--muted)' }}>{i.email}</td>
                   <td className="px-5 py-4" style={{ color: 'var(--muted)' }}>{i.department}</td>
                   <td className="px-5 py-4"><span className="text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">⭐ {i.rating}</span></td>
@@ -231,6 +237,8 @@ const Interns = () => {
           </table>
         </div>
       </Card>
+
+      <UserProfileModal isOpen={!!selectedUserId} onClose={() => setSelectedUserId(null)} userId={selectedUserId} />
     </div>
   );
 };

@@ -59,6 +59,7 @@ api.interceptors.request.use((config) => {
 
 // ── Response interceptor — auto refresh on 401 ───────────
 let refreshing = null;
+const REFRESH_EXCLUDED_URLS = new Set(['/auth/refresh', '/auth/login', '/auth/verify-otp']);
 
 api.interceptors.response.use(
   (r) => r,
@@ -66,6 +67,7 @@ api.interceptors.response.use(
     const original = error.config;
     const status = error.response?.status;
 
+    if (status === 401 && !original._retry && !REFRESH_EXCLUDED_URLS.has(original.url)) {
     if (
       status === 401 &&
       !original._retry &&

@@ -1,6 +1,12 @@
 // ════════════════════════════════════════════════════════════
 //  ADMIN — pages/Management.jsx (Interns API)
 // ════════════════════════════════════════════════════════════
+import { useEffect, useState } from 'react';
+import { Search, Loader2, ClipboardList, Star, CheckCircle, XCircle } from 'lucide-react';
+import { Card, Badge, SectionHeader, Modal, Input } from '../../shared/components/UI';
+import UserProfileModal from '../../shared/components/UserProfileModal';
+import api from '../../lib/api';
+import notify from '../../lib/toast';
 import { useEffect, useState } from "react";
 import { Search, Loader2, ClipboardList } from "lucide-react";
 import {
@@ -20,6 +26,7 @@ const Management = () => {
 
   // Existing Add Intern modal
   const [modal, setModal] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState(null);
 
   // NEW Invite Code modal
   const [inviteModal, setInviteModal] = useState(false);
@@ -256,6 +263,13 @@ const Management = () => {
             </thead>
             <tbody>
               {filtered.map((i) => (
+                <tr key={i.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                  <td className="px-5 py-4 font-medium" style={{ color: 'var(--text)' }}>
+                    <button type="button" onClick={() => setSelectedUserId(i.id)} className="text-left hover:underline" style={{ color: 'var(--text)' }}>
+                      {i.name}
+                    </button>
+                  </td>
+                  <td className="px-5 py-4" style={{ color: 'var(--muted)' }}>{i.department || '—'}</td>
                 <tr
                   key={i.id}
                   style={{ borderBottom: "1px solid var(--border)" }}
@@ -461,6 +475,8 @@ const Management = () => {
           <Input label="Initial password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
         </div>
       </Modal>
+
+      <UserProfileModal isOpen={!!selectedUserId} onClose={() => setSelectedUserId(null)} userId={selectedUserId} />
     </div>
   );
 };

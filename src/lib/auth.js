@@ -8,8 +8,10 @@ import { create } from 'zustand';
 import api, { getErrorMessage } from './api';
 
 const STORAGE_KEY = 'skillnova.auth';
+const STORAGE_ENABLED = !import.meta.env.DEV;
 
 const loadFromStorage = () => {
+  if (!STORAGE_ENABLED) return null;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
@@ -19,6 +21,11 @@ const loadFromStorage = () => {
 };
 
 const persist = (state) => {
+  if (!STORAGE_ENABLED) {
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+    return;
+  }
+
   try {
     if (state.user && state.accessToken) {
       localStorage.setItem(
@@ -42,6 +49,7 @@ export const useAuthStore = create((set, get) => ({
   step: "login", // 'login' | 'signup' | 'signup_otp' | 'otp' | 'authenticated'
   challengeToken: null,
   devCode: null,
+  otpMode: 'admin',
   contactHint: null,
   internStartDate: null,
   internEndDate: null,
@@ -78,17 +86,29 @@ export const useAuthStore = create((set, get) => ({
       persist(get());
     const persisted = loadFromStorage();
     if (persisted?.user && persisted?.accessToken) {
-      set({ user: persisted.user, accessToken: persisted.accessToken, hydrated: true });
+      set({
+        user: persisted.user,
+        accessToken: persisted.accessToken,
+        permissions: derivePermissions(persisted.user.role),
+        step: 'auth-checking',
+        hydrated: true,
+      });
       try {
         const { data } = await api.get('/auth/me');
-        set({ user: data.user, permissions: data.permissions, hydrated: true });
+        set({
+          user: data.user,
+          accessToken: get().accessToken,
+          permissions: data.permissions || derivePermissions(data.user?.role),
+          step: 'authenticated',
+          hydrated: true,
+        });
         persist(get());
       } catch {
-        set({ user: null, accessToken: null, hydrated: true });
+        set({ user: null, accessToken: null, permissions: [], step: 'login', hydrated: true });
         persist(get());
       }
     } else {
-      set({ hydrated: true });
+      set({ user: null, accessToken: null, permissions: [], step: 'login', hydrated: true });
     }
   },
 
@@ -106,8 +126,10 @@ export const useAuthStore = create((set, get) => ({
           challengeToken: data.challengeToken,
           devCode: data.devCode ?? null,
           contactHint: data.contactHint,
+          otpMode: data.otpMode ?? (data.user?.role === 'INTERN' ? 'user' : 'admin'),
           loading: false,
         });
+        return { step: 'otp', otpMode: data.otpMode ?? (data.user?.role === 'INTERN' ? 'user' : 'admin') };
         return { step: "otp" };
       }
       set({
@@ -241,6 +263,11 @@ export const useAuthStore = create((set, get) => ({
   },
 
   reset: () => {
+    set({ user: null, accessToken: null, permissions: [], step: 'login', challengeToken: null, error: null, otpMode: 'admin' });
+    persist(get());
+  },
+
+  goBackToLogin: () => set({ step: 'login', error: null, challengeToken: null, devCode: null, otpMode: 'admin' }),
     set({
       user: null,
       accessToken: null,

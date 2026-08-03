@@ -1,3 +1,12 @@
+import crypto from 'node:crypto';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
+
+const configDir = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(configDir, '../../.env') });
+
+const requiredSecrets = ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET', 'JWT_SECRET', 'CSRF_SECRET'];
 import "dotenv/config";
 import crypto from "node:crypto";
 
@@ -12,10 +21,33 @@ const required = [
 ];
 const required = ['DATABASE_URL', 'JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET', 'JWT_SECRET', 'CSRF_SECRET'];
 const isProd = process.env.NODE_ENV === 'production';
-const missing = required.filter((k) => !process.env[k]);
+const missingSecrets = requiredSecrets.filter((k) => !process.env[k]);
+const missingDatabaseUrl = !process.env.DATABASE_URL;
+const invalidDatabaseUrl =
+  process.env.DATABASE_URL && !/^postgres(?:ql)?:\/\//.test(process.env.DATABASE_URL);
 
-if (missing.length) {
+if (missingDatabaseUrl) {
+  const message =
+    '[config] Missing DATABASE_URL. Set it in server/.env to a PostgreSQL URL, e.g. postgresql://user:password@host:5432/skillnova';
   if (isProd) {
+    console.error(message);
+    process.exit(1);
+  }
+  console.warn(message);
+}
+
+if (invalidDatabaseUrl) {
+  const message = '[config] DATABASE_URL must start with postgresql:// or postgres://';
+  if (isProd) {
+    console.error(message);
+    process.exit(1);
+  }
+  console.warn(message);
+}
+
+if (missingSecrets.length) {
+  if (isProd) {
+    console.error(`[config] Missing required env var(s): ${missingSecrets.join(', ')}`);
     console.error(
       "\n[config] FATAL: Missing required environment variable(s):",
     );
@@ -32,6 +64,10 @@ if (missing.length) {
   // Dev / test: warn loudly and substitute placeholders so unit tests can
   // run without a populated .env file. Production servers always set these.
   console.warn(
+    `[config] Missing env var(s) substituted with random placeholders: ${missingSecrets.join(', ')}`,
+  );
+  for (const k of missingSecrets) {
+    process.env[k] = `dev-${k.toLowerCase()}-${crypto.randomBytes(12).toString('hex')}`;
     `[config] Missing env var(s) substituted with random placeholders: ${missing.join(", ")}`,
   );
   for (const k of missing) {
@@ -70,6 +106,24 @@ if (!isProd) {
   }
 }
 
+function parseTtl(value, fallback) {
+  if (!value) return fallback;
+  return /^\d+$/.test(value) ? Number(value) : value;
+}
+
+function isPrivateHost(hostname) {
+  return (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '::1' ||
+    hostname === '0.0.0.0' ||
+    hostname.startsWith('127.') ||
+    hostname.startsWith('192.168.') ||
+    hostname.startsWith('10.') ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname)
+  );
+}
+
 export const config = {
   env: process.env.NODE_ENV || "development",
   port: Number(process.env.PORT) || 4000,
@@ -98,6 +152,10 @@ export const config = {
     accessSecret: process.env.JWT_ACCESS_SECRET,
     refreshSecret: process.env.JWT_REFRESH_SECRET,
     secret: process.env.JWT_SECRET,
+    accessTtl: parseTtl(process.env.ACCESS_TOKEN_TTL, '15m'),
+    refreshTtl: parseTtl(process.env.REFRESH_TOKEN_TTL, '7d'),
+    otpTtl: parseTtl(process.env.OTP_TTL, '10m'),
+    twoFaTtl: parseTtl(process.env.TWOFA_TTL, '10m'),
     accessTtl: process.env.ACCESS_TOKEN_TTL
       ? /\D/.test(process.env.ACCESS_TOKEN_TTL)
         ? process.env.ACCESS_TOKEN_TTL
@@ -178,5 +236,18 @@ export const config = {
   logLevel: process.env.LOG_LEVEL || 'info',
   isProd: process.env.NODE_ENV === 'production',
 };
+
+export function isCorsOriginAllowed(origin) {
+  if (!origin) return true;
+  if (config.corsOrigin.includes(origin)) return true;
+  if (config.isProd) return false;
+
+  try {
+    const { protocol, hostname } = new URL(origin);
+    return ['http:', 'https:'].includes(protocol) && isPrivateHost(hostname);
+  } catch {
+    return false;
+  }
+}
 
 export default config;
