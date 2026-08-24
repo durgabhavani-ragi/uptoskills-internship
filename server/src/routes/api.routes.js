@@ -23,27 +23,27 @@ const internIdParam = z.object({ internId: z.string().cuid() });
 const idParam = z.object({ id: z.string().cuid() });
 
 // ── Reports ───────────────────────────────────────────────
-api.get('/reports', requirePermission('reports:read'), validate(schemas.pagination, 'query'), reports.list);
-api.get('/reports/stats', requirePermission('reports:read'), reports.stats);
-api.get('/reports/:id', requirePermission('reports:read'), validate(idParam, 'params'), reports.getById);
-api.post('/reports', requirePermission('reports:create'), validate(z.object({
+api.get("/reports", requirePermission("reports:read"), validate(schemas.pagination, "query"), reports.list);
+api.get("/reports/stats", requirePermission("reports:read"), reports.stats);
+api.get("/reports/:id", requirePermission("reports:read"), validate(idParam, "params"), reports.getById);
+api.post("/reports", requirePermission("reports:create"), validate(z.object({
   title: z.string().min(3).max(200),
   content: z.string().min(1).optional(),
   fileUrl: z.string().url().optional(),
   weekNumber: z.number().int().min(1).max(104).optional(),
 })), reports.create);
-api.patch('/reports/:id', requirePermission('reports:update'), validate(idParam, 'params'), validate(z.object({
+api.patch("/reports/:id", requirePermission("reports:update"), validate(idParam, "params"), validate(z.object({
   title: z.string().min(3).max(200).optional(),
   content: z.string().optional(),
   fileUrl: z.string().url().optional().nullable(),
   weekNumber: z.number().int().min(1).max(104).optional(),
 })), reports.update);
-api.patch('/reports/:id/review', requirePermission('reports:review'), validate(idParam, 'params'), validate(z.object({
-  status: z.enum(['PENDING', 'REVIEWED', 'REJECTED']).default('REVIEWED'),
+api.patch("/reports/:id/review", requirePermission("reports:review"), validate(idParam, "params"), validate(z.object({
+  status: z.enum(["PENDING", "REVIEWED", "REJECTED"]).default("REVIEWED"),
   score: z.number().min(0).max(10).optional(),
   feedback: z.string().max(2000).optional(),
 })), reports.review);
-api.delete('/reports/:id', requirePermission('reports:delete'), validate(idParam, 'params'), reports.remove);
+api.delete("/reports/:id", requirePermission("reports:delete"), validate(idParam, "params"), reports.remove);
 
 // ── Announcements ─────────────────────────────────────────
 api.get('/announcements', requirePermission('announcements:read'), validate(schemas.pagination, 'query'), announcements.list);
@@ -156,6 +156,30 @@ api.post('/notifications/read-all', notif.markAllRead);
 api.delete('/notifications/:id', validate(idParam, 'params'), notif.remove);
 
 // ── Analytics ─────────────────────────────────────────────
+api.get(
+  "/analytics/platform",
+  requirePermission("users:read"),
+  notif.platformStats,
+);
+api.get(
+  "/analytics/interns",
+  requirePermission("users:read"),
+  notif.internPerformance,
+);
+// ── Ratings ───────────────────────────────────────────────
+api.post(
+  "/interns/:internId/rating",
+  requirePermission("ratings:manage"),
+  validate(internIdParam, "params"),
+  validate(ratings.rateSchema),
+  ratings.giveRating,
+);
+api.get(
+  "/interns/:internId/ratings",
+  validate(internIdParam, "params"),
+  ratings.listRatings,
+);
+// Analytics
 api.get('/analytics/platform', requirePermission('users:read'), notif.platformStats);
 api.get('/analytics/interns', requirePermission('users:read'), notif.internPerformance);
 

@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
 import { Card, Badge } from "../../shared/components/UI";
+import UserProfileModal from '../../shared/components/UserProfileModal';
 import api, { getErrorMessage } from "../../lib/api";
 import notify from "../../lib/toast";
 import UserProfileModal from '../../shared/components/UserProfileModal';
@@ -216,6 +217,7 @@ const Interns = () => {
                   "Today's Attendance",
                   "Streak & Risk",
                   "Rating",
+                  "Status",
                   "Actions",
                 ].map((h) => (
                   <th
@@ -318,6 +320,9 @@ const Interns = () => {
                       >
                         {i.isTL ? 'Unset TL' : 'Set TL'}
                       </button>
+                    </td>
+                    <td className="px-5 py-4 text-xs uppercase font-medium">
+                      {i.status}
                     </td>
                   </tr>
                 );

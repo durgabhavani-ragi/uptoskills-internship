@@ -144,9 +144,6 @@ export const summary = asyncHandler(async (req, res) => {
     prisma.attendance.count({
       where: { ...where, date: { gte: start }, status: "LEAVE" },
     }),
-    prisma.attendance.count({ where: { ...where, date: { gte: start }, status: 'PRESENT' } }),
-    prisma.attendance.count({ where: { ...where, date: { gte: start }, status: 'ABSENT' } }),
-    prisma.attendance.count({ where: { ...where, date: { gte: start }, status: 'LEAVE' } }),
     prisma.attendance.count({ where: { ...where, date: { gte: start } } }),
   ]);
   res.json({
