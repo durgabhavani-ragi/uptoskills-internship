@@ -1,11 +1,6 @@
 // ════════════════════════════════════════════════════════════
 //  Attendance Controller
 // ════════════════════════════════════════════════════════════
-import { z } from "zod";
-import prisma from "../utils/prisma.js";
-import { ApiError } from "../utils/ApiError.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
-import { audit } from "../services/audit.service.js";
 import { z } from 'zod';
 import prisma from '../utils/prisma.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -103,7 +98,6 @@ export const mark = asyncHandler(async (req, res) => {
     meta: { userId, status },
     req,
   });
-  await audit({ userId: req.user.id, action: 'attendance.mark', resource: 'attendance', resourceId: record.id, meta: { userId, status }, req });
   res.json({ attendance: record });
 });
 
@@ -312,7 +306,6 @@ export const requestLeave = asyncHandler(async (req, res) => {
   });
 
   res.json({ marked: records.length, records });
-  res.json({ present, absent, leave, total, rate: total ? Math.round(((present + leave) / total) * 100) : 0 });
 });
 
 export default { list, mark, checkInOut, summary, streak, requestLeave };
